@@ -1,6 +1,9 @@
 const { Router } = require('express')
 const routerProductos = Router()
 
+//Middleware de autorización
+const { checkAuth } = require('../middlewares/checkAuth.js');
+
 //declaro mi clase contenedor
 const ProductsContainer = require('../controllers/productos')
 
@@ -10,8 +13,13 @@ const productContainer = new ProductsContainer('../productos.txt');
 routerProductos.get('/productos', (req, res) =>{
 
     const p = async () => {
-        const products = await productContainer.getAll();
-        res.status(200).send(products)
+        const result = await productContainer.getAll();
+        if (typeof result === 'string'){
+            res.status(500).send(result)
+        }
+        else{
+            res.status(200).send(result);
+        }
     }
 
     p();
@@ -28,18 +36,30 @@ routerProductos.get('/productos/:id', (req, res) =>{
     }
 
     const p = async () => {
-        res.status(200).send(await productContainer.getById(id));
+        result = await productContainer.getById(id)
+        if (typeof result === 'string'){
+            res.status(500).send(result)
+        }
+        else{
+            res.status(200).send(result);
+        }
     }
     p();
 })
 
-routerProductos.post('/productos', (req,res) =>{
+routerProductos.post('/productos', checkAuth, (req,res) =>{
 
     const {nombre, precio, thumbnail, timestamp, descripcion, codigo, stock} = req.body //se levantan los parametros del req.body
     const p = async()=>{
         try{
-            await productContainer.add({nombre:nombre, precio:precio, thumbnail:thumbnail, timestamp:timestamp, descripcion:descripcion, codigo:codigo, stock:stock})
-            res.status(201).redirect('/api/productos') //status 201 es OK
+            const result = await productContainer.add({nombre:nombre, precio:precio, thumbnail:thumbnail, timestamp:timestamp, descripcion:descripcion, codigo:codigo, stock:stock})
+
+            if (typeof result === 'number'){
+                res.status(201).redirect('/api/productos') //status 201 es OK
+            }else{
+                res.sendStatus(500) //status 500 es Server Error
+            }
+            
         }catch(e){
             res.sendStatus(500) //status 500 es Server Error
         }
@@ -47,7 +67,7 @@ routerProductos.post('/productos', (req,res) =>{
     p();
 })
 
-routerProductos.put('/productos/:id', (req,res) =>{
+routerProductos.put('/productos/:id', checkAuth, (req,res) =>{
 
     const {nombre, precio, thumbnail, timestamp, descripcion, codigo, stock} = req.body //se levantan los parametros del req.body
 
@@ -55,7 +75,6 @@ routerProductos.put('/productos/:id', (req,res) =>{
     const id = Number(req.params.id) //en caso de no contener un numero, la funciona devuelve un NaN
     if (isNaN(id)) //NaN = Not a Number
     {
-        console.log('error')
         res.status(400).json({error:`${req.params.id} no es un número válido`})
         return
     }
@@ -64,7 +83,6 @@ routerProductos.put('/productos/:id', (req,res) =>{
     const precioFinal = Number(precio) //en caso de no contener un numero, la funciona devuelve un NaN
     if (isNaN(precioFinal)) //NaN = Not a Number
     {
-        console.log('error')
         res.status(400).json({error:`${precioFinal} no es un número válido`})
         return
     }
@@ -80,8 +98,12 @@ routerProductos.put('/productos/:id', (req,res) =>{
     
     const p = async()=>{
         try{
-            await productContainer.updateById(id,{nombre, precioFinal, thumbnail, timestamp, descripcion, codigo, stockFinal})
-            res.sendStatus(200) //status 201 es OK
+            const result = await productContainer.updateById(id,{nombre, precioFinal, thumbnail, timestamp, descripcion, codigo, stockFinal})
+            if (result.includes('OK')){
+                res.status(201).redirect('/api/productos') //status 201 es OK
+            }else{
+                res.status(500).send(result) //status 500 es Server Error
+            }
         }catch(e){
             res.sendStatus(500) //status 500 es Server Error
         }
@@ -91,7 +113,7 @@ routerProductos.put('/productos/:id', (req,res) =>{
 
 })
 
-routerProductos.delete('/productos/:id', (req,res) =>{
+routerProductos.delete('/productos/:id', checkAuth, (req,res) =>{
 
     //transformo a Number el contenido de id que era string
     const id = Number(req.params.id) //en caso de no contener un numero, la funciona devuelve un NaN
@@ -104,8 +126,13 @@ routerProductos.delete('/productos/:id', (req,res) =>{
 
     const p = async()=>{
         try{
-            await productContainer.deleteById(id)
-            res.sendStatus(200) //status 201 es OK
+            const result = await productContainer.deleteById(id)
+            if (result.includes('OK')){
+                res.status(200).send(result) //status 201 es OK
+            }else{
+                console.log('ERR: ', result)
+                res.status(500).send(result) //status 500 es Server Error
+            }
         }catch(e){
             res.sendStatus(500) //status 500 es Server Error
         }

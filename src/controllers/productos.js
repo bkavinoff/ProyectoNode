@@ -7,6 +7,63 @@ class ProductsContainer {
         this.path = path.join(__dirname, nombreArchivo);
     }
 
+    async getAll(){
+        try{
+            if (fs.existsSync(this.path)){  
+                             
+                //el archivo existe, obtengo los productos
+                let products = await fs.promises.readFile(this.path, 'utf-8');
+
+                //parseo de string a jsonObject
+                let productList = JSON.parse(products);
+                
+                //retorno
+                if (productList.length > 0){
+                    return productList;
+                }else{
+                    return ('No hay productos');
+                }
+            }else{
+                //no existe el archivo
+                console.log('No existe el archivo')
+            }
+        }catch(err){
+            console.log('Hubo un error al intentar leer el archivo de productos');
+        }
+    }
+
+    async getById(id){
+        try{
+            if (fs.existsSync(this.path)){                
+                //el archivo existe, obtengo los productos
+                let products = await fs.promises.readFile(this.path, 'utf-8');
+                
+                //parseo de string a jsonObject
+                let productList = JSON.parse(products);
+                
+                let arrProductos = this.transformJSONtoArray(productList);
+                
+                //busco el producto
+                let product = arrProductos.find(p => p.id === id);
+                
+                //retorno
+                if (typeof(product) === 'undefined'){
+                    return (`Error: No existe un producto con el id ${id}`);
+                }else{
+                    return product;
+                }
+
+            }else{
+                //no existe el archivo
+                console.log('Error: No existe el archivo de productos')
+                return 'Error: Hubo un error al intentar leer el archivo de productos'
+            }
+        }catch(err){
+            console.log('Hubo un error al intentar leer el archivo de productos');
+            return ('Error: Hubo un error al intentar leer el archivo de productos', err)
+        }
+    }
+
     async add(obj) {
         try{
             if (fs.existsSync(this.path)){
@@ -45,6 +102,7 @@ class ProductsContainer {
                 //sobreescribo el archivo con el nuevo producto
                 await fs.promises.writeFile(this.path, JSON.stringify(arrProductos));
                 console.log("Agregado el producto a la lista con id: ", obj.id)
+                
             }else{
                 //seteo el id 1 a mi obj
                 obj.id = 1;
@@ -64,40 +122,11 @@ class ProductsContainer {
             }
 
             //retorno
-            res.status(200).send(`Se ha creado el producto ${obj.nombre}, y se le asignó el id ${obj.id}`)
+            return obj.id
             
         }catch(err){
             console.log('Hubo un error al intentar guardar: ', err);
-        }
-    }
-
-    async getById(id){
-        try{
-            if (fs.existsSync(this.path)){                
-                //el archivo existe, obtengo los productos
-                let products = await fs.promises.readFile(this.path, 'utf-8');
-                
-                //parseo de string a jsonObject
-                let productList = JSON.parse(products);
-                
-                let arrProductos = this.transformJSONtoArray(productList);
-                
-                //busco el producto
-                let product = arrProductos.find(p => p.id === id);
-                
-                //retorno
-                if (typeof(product) === 'undefined'){
-                    return (`Error: No existe un producto con el id ${id}`);
-                }else{
-                    return product;
-                }
-
-            }else{
-                //no existe el archivo
-                console.log('No existe el archivo')
-            }
-        }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de productos');
+            return ('Error: Hubo un error al intentar guardar: ', err)
         }
     }
 
@@ -115,73 +144,11 @@ class ProductsContainer {
             }else{
                 //no existe el archivo
                 console.log('No existe el archivo')
+                return 'Error: Hubo un error al intentar leer el archivo de productos'
             }
         }catch(err){
             console.log('Hubo un error al intentar leer el archivo de productos');
-        }
-    }
-
-    async getAll(){
-        try{
-            if (fs.existsSync(this.path)){  
-                             
-                //el archivo existe, obtengo los productos
-                let products = await fs.promises.readFile(this.path, 'utf-8');
-
-                //parseo de string a jsonObject
-                let productList = JSON.parse(products);
-                
-                //retorno
-                if (productList.length > 0){
-                    return productList;
-                }else{
-                    return ('No hay productos');
-                }
-            }else{
-                //no existe el archivo
-                console.log('No existe el archivo')
-            }
-        }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de productos');
-        }
-    }
-
-    async deleteById(id){
-        try{
-            let prod = await this.getById(id)
-            if (typeof(prod) === 'string') {
-                return (`No existe un producto con el id ${id}`);
-            }
-
-            //obtengo el listado de productos
-            let productList = await this.getAll();
-
-            //paso a Array
-            let arr = this.transformJSONtoArray(productList);
-
-            //obtengo el index del producto
-            let index =  arr.findIndex(p => p.id === id);
-            
-            //elimino del array el producto segun el index
-            arr.splice(index,1)
-
-            //escribo el archivo
-            await fs.promises.writeFile(this.path, JSON.stringify(arr));
-            
-            console.log('El producto se ha eliminado con éxito.')
-        }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de productos');
-        }
-    }
-
-    async deleteAll(){
-        try{
-            if (fs.existsSync(this.path)){  
-                await fs.promises.writeFile(this.path, '');
-                console.log('Se han eliminado con éxito todos los productos.')
-            }
-        }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de productos');
+            return ('Error: Hubo un error al intentar leer el archivo de productos', err)
         }
     }
 
@@ -213,9 +180,50 @@ class ProductsContainer {
             //escribo el archivo
             await fs.promises.writeFile(this.path, JSON.stringify(arr));
             
-            console.log('El producto se ha actualizado con éxito.')
-            return
+            console.log('OK: El producto se ha actualizado con éxito.')
+            return 'OK: El producto se ha actualizado con éxito.'
             
+        }catch(err){
+            console.log('Error: Hubo un error al intentar leer el archivo de productos');
+            return ('Error: Hubo un error al intentar leer el archivo de productos')
+        }
+    }
+
+    async deleteById(id){
+        try{
+            let prod = await this.getById(id)
+
+            if (typeof(prod) === 'string') {
+                return (`Error: No existe un producto con el id ${id}`);
+            }
+
+            //obtengo el listado de productos
+            let productList = await this.getAll();
+
+            //paso a Array
+            let arr = this.transformJSONtoArray(productList);
+
+            //obtengo el index del producto
+            let index =  arr.findIndex(p => p.id === id);
+            
+            //elimino del array el producto segun el index
+            arr.splice(index,1)
+
+            //escribo el archivo
+            await fs.promises.writeFile(this.path, JSON.stringify(arr));
+            
+            return ('OK: El producto se ha eliminado con éxito.')
+        }catch(err){
+            return ('Error: Hubo un error al intentar leer el archivo de productos', err)
+        }
+    }
+
+    async deleteAll(){
+        try{
+            if (fs.existsSync(this.path)){  
+                await fs.promises.writeFile(this.path, '');
+                console.log('Se han eliminado con éxito todos los productos.')
+            }
         }catch(err){
             console.log('Hubo un error al intentar leer el archivo de productos');
         }

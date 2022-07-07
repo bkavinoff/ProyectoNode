@@ -12,9 +12,14 @@ app.use(express.urlencoded({extended:true}))
 const productRoutes = require('./routes/productRoutes')
 const cartRoutes = require('./routes/cartRoutes')
 
-//app.use('/api', express.static('public'))
+app.use('/', express.static('public'))
 app.use('/api', productRoutes)
 app.use('/api', cartRoutes)
+
+//en caso de colocar cualquier otra ruta diferente a las creadas, muestro el error:
+app.use('/*', (req, res) => {
+    res.status(404).send({ error: -2, mensaje: `No existe la ruta ${req.url}/${req.method}`});
+});
 
 
 //middleware de error:
