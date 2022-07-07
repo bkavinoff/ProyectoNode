@@ -87,7 +87,7 @@ class ProductsContainer {
                 
                 //retorno
                 if (typeof(product) === 'undefined'){
-                    return (`No existe un producto con el id ${id}`);
+                    return (`Error: No existe un producto con el id ${id}`);
                 }else{
                     return product;
                 }

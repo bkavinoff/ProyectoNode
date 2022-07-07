@@ -1,1 +1,1 @@
-[{"nombre":"tenedor2","thumbnail":"www","timestamp":"06/07/2022, 17:34:38","descripcion":"servilleta mejor","codigo":"s2","id":1}]
+[{"nombre":"tenedor2","thumbnail":"www","timestamp":"06/07/2022, 17:34:38","descripcion":"servilleta mejor","codigo":"s2","id":1},{"nombre":"servilleta3","precio":3,"thumbnail":"www3","timestamp":"07/07/2022, 00:17:45","descripcion":"servilleta papel 3","codigo":"s3","stock":5,"id":2}]

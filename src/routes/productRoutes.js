@@ -11,15 +11,10 @@ routerProductos.get('/productos', (req, res) =>{
 
     const p = async () => {
         const products = await productContainer.getAll();
-        // console.log("productos:")
-        // console.log(products)
-        // console.log(typeof products)
         res.status(200).send(products)
     }
 
     p();
-
-
 })
 
 routerProductos.get('/productos/:id', (req, res) =>{

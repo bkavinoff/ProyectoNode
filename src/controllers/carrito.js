@@ -2,12 +2,18 @@ const res = require('express/lib/response');
 const fs = require('fs');
 const path = require('path')
 
+//declaro mi clase contenedor
+const ProductsContainer = require('./productos')
+
+//inicializo el contenedor con el archivo de productos
+const productContainer = new ProductsContainer('../productos.txt');
+
 class CartContainer {
     constructor (nombreArchivo) {
         this.path = path.join(__dirname, nombreArchivo);
     }
 
-    async add(obj) {
+    async addNewCart(obj) {
         try{
             if (fs.existsSync(this.path)){
                 
@@ -42,6 +48,7 @@ class CartContainer {
                 //sobreescribo el archivo con el nuevo producto
                 await fs.promises.writeFile(this.path, JSON.stringify(arrCarritos));
                 console.log("Agregado el carrito a la lista con id: ", obj.id)
+
             }else{
                 //seteo el id 1 a mi obj
                 obj.id = 1;
@@ -57,15 +64,45 @@ class CartContainer {
                 console.log("Agregado el carrito a la lista con id: ", obj.id)
             }
 
-            //retorno
-            res.status(200).send(`Se ha creado el carrito y se le asignó el id ${obj.id}`)
+            return obj.id
             
         }catch(err){
             console.log('Hubo un error al intentar guardar: ', err);
         }
     }
 
-    async getById(id){
+    async deleteCartById(id){
+        try{
+            
+            let cart = await this.getCartById(id)
+
+            if (typeof(cart) === 'string') {
+                return (`Error: No existe un carrito con el id: ${id}`);
+            }
+
+            //obtengo el listado de productos
+            let cartList = await this.getAll();
+
+            //paso a Array
+            let arr = this.transformJSONtoArray(cartList);
+
+            //obtengo el index del producto
+            let index =  arr.findIndex(p => p.id === id);
+            
+            //elimino del array el producto segun el index
+            arr.splice(index,1)
+
+            //escribo el archivo
+            await fs.promises.writeFile(this.path, JSON.stringify(arr));
+            
+            console.log('El carrito se ha eliminado con éxito.')
+            return 'OK'
+        }catch(err){
+            console.log('Hubo un error al intentar leer el archivo de carritos');
+        }
+    }
+
+    async getCartById(id){
         try{
             if (fs.existsSync(this.path)){                
                 //el archivo existe, obtengo los productos
@@ -86,26 +123,6 @@ class CartContainer {
                     return cart;
                 }
 
-            }else{
-                //no existe el archivo
-                console.log('No existe el archivo')
-            }
-        }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de carritos');
-        }
-    }
-
-    async getCartCount(){
-        try{
-            if (fs.existsSync(this.path)){                
-                //el archivo existe, obtengo los productos
-                let carts = await fs.promises.readFile(this.path, 'utf-8');
-                
-                //parseo de string a jsonObject
-                let cartList = JSON.parse(carts);
-                
-                //retorno
-                return cartList.length
             }else{
                 //no existe el archivo
                 console.log('No existe el archivo')
@@ -140,74 +157,128 @@ class CartContainer {
         }
     }
 
-    async deleteById(id){
+    async getProductsByCartId(id){
         try{
-            let cart = await this.getById(id)
-            if (typeof(prod) === 'string') {
-                return (`No existe un carrito con el id ${id}`);
+            if (fs.existsSync(this.path)){                
+                //el archivo existe, obtengo los productos
+                let carts = await fs.promises.readFile(this.path, 'utf-8');
+                
+                //parseo de string a jsonObject
+                let cartList = JSON.parse(carts);
+                
+                let arrCart = this.transformJSONtoArray(cartList);
+                
+                //busco el carrito
+                let cart = arrCart.find(p => p.id === id);
+                
+                //retorno
+                if (typeof(cart) === 'undefined'){
+                    return (`No existe un carrito con el id ${id}`);
+                }
+                else
+                {
+                    //console.log('cart.productos.length: ', cart.productos.length)
+                    if(cart.productos.length == 0)
+                    {
+                        return (`El carrito con id: ${id} está vacío`);
+                    }
+                    else 
+                    {
+                        return cart.productos;
+                    }
+                }
+
+            }else{
+                //no existe el archivo
+                console.log('No existe el archivo')
             }
-
-            //obtengo el listado de productos
-            let cartList = await this.getAll();
-
-            //paso a Array
-            let arr = this.transformJSONtoArray(cartList);
-
-            //obtengo el index del producto
-            let index =  arr.findIndex(p => p.id === id);
-            
-            //elimino del array el producto segun el index
-            arr.splice(index,1)
-
-            //escribo el archivo
-            await fs.promises.writeFile(this.path, JSON.stringify(arr));
-            
-            console.log('El carrito se ha eliminado con éxito.')
         }catch(err){
             console.log('Hubo un error al intentar leer el archivo de carritos');
         }
     }
 
-    async deleteAll(){
+    async addProductToCartByCartId(id,id_prod) {
         try{
-            if (fs.existsSync(this.path)){  
-                await fs.promises.writeFile(this.path, '');
-                console.log('Se han eliminado con éxito todos los carritos.')
+            if (fs.existsSync(this.path)){
+                
+                //obtengo los carritos
+                let carts = await this.getAll();
+
+                //paso a JSON a array
+                let arrCarts = this.transformJSONtoArray(carts);
+                
+                //busco el index del carrito en el array de carritos
+                let cartIndex = arrCarts.findIndex(c => c.id === id);
+                
+                if (cartIndex === -1){
+                    //no existe el carrito
+                    return 'Error: No existe el carrito'
+                }
+
+                //busco el producto segun el id
+                let prod = await productContainer.getById(id_prod)
+                
+                if (typeof(prod) === 'string'){
+                    //no existe el carrito
+                    return 'Error: No existe el producto'
+                }
+
+                //es un producto válido, lo agrego al carrito
+                arrCarts[cartIndex].productos.push(prod)
+
+                //sobreescribo el archivo con el nuevo producto
+                await fs.promises.writeFile(this.path, JSON.stringify(arrCarts));
+                console.log(`Agregado el producto ${prod.nombre} al carrito con id: ${id}`)
+                return 'OK'
+            }else{
+                console.log('No existe el archivo')
             }
         }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de carritos');
+            console.log('Hubo un error al intentar guardar: ', err);
         }
     }
 
-    async updateById(id, carritoActualizado){
+    async deleteProductFromCartByCartId(id,id_prod) {
         try{
-            let prod = await this.getById(id)
-            if (typeof(prod) === 'string') {
-                return (`No existe un carrito con el id ${id}`);
+            if (fs.existsSync(this.path)){
+                
+                //obtengo los carritos
+                let carts = await this.getAll();
+
+                //paso a JSON a array
+                let arrCarts = this.transformJSONtoArray(carts);
+                
+                //busco el index del carrito en el array de carritos
+                let cartIndex = arrCarts.findIndex(c => c.id === id);
+                
+                if (cartIndex === -1){
+                    //no existe el carrito
+                    return 'Error: No existe el carrito'
+                }
+
+                //busco el index del producto en el array de carritos
+                let prodIndex = arrCarts[cartIndex].productos.findIndex(p => p.id === id_prod);
+                console.log(prodIndex)
+
+                if (prodIndex === -1){
+                    //no existe el carrito
+                    return 'Error: No existe el producto'
+                }
+
+                //es un producto válido, lo saco del carrito
+                arrCarts[cartIndex].productos.splice(prodIndex,1)
+                console.log(arrCarts[cartIndex])
+
+                //sobreescribo el archivo con el nuevo producto
+                await fs.promises.writeFile(this.path, JSON.stringify(arrCarts));
+                console.log(`Se ha eliminado el producto del carrito con id: ${id}`)
+                return 'OK'
+            }else{
+                console.log('No existe el archivo')
             }
-
-            //obtengo el listado de carritos
-            let cartList = await this.getAll();
-
-            //paso a Array
-            let arr = this.transformJSONtoArray(cartList);
-
-            //obtengo el index del carrito
-            let index =  arr.findIndex(p => p.id === id);
-            
-            //actualizo los datos del carrito
-            // arr[index].nombre = productoActualizado.nombre
-            // arr[index].precio = productoActualizado.precio
-            // arr[index].thumbnail = productoActualizado.thumbnail
-
-            //escribo el archivo
-            await fs.promises.writeFile(this.path, JSON.stringify(arr));
-            
-            console.log('El producto se ha actualizado con éxito.')
-            return
             
         }catch(err){
-            console.log('Hubo un error al intentar leer el archivo de productos');
+            console.log('Hubo un error al intentar guardar: ', err);
         }
     }
 
@@ -223,8 +294,5 @@ class CartContainer {
     }
 
 }
-
-
-
 
 module.exports = CartContainer // 👈 Export class
